@@ -2,6 +2,7 @@
 Detect manualmapped images remotely, without hassle
 
 Extreme Injector -> detected
+
 Xenos -> detected (even with Add Loader reference enabled)
 
 How does it work?
