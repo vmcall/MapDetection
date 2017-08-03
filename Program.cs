@@ -12,21 +12,20 @@ namespace MapDetection
         static void Main(string[] args)
         {
             Stopwatch stopWatch = Stopwatch.StartNew();
-
-            Process.EnterDebugMode();
-            foreach (var process in Process.GetProcesses())
+            
+            Process.GetProcesses().ToList().ForEach(process =>
             {
                 try
                 {
-                    MapDetector.ScanForAnomalies(process);
+                    MapDetector.ScanForAnomalies(process, MapDetector.SCAN_MODE.DEEP);
                 }
-                catch (Exception e)
+                catch
                 {
-                    // Log Error?
+            
                 }
-            }
+            });
 
-            Log.LogInfo($"Finished scanning all processes - {stopWatch.ElapsedMilliseconds}ms");
+            Log.LogInfo($"Finished scanning - {stopWatch.ElapsedMilliseconds}ms");
 
             Console.ReadLine();
         }

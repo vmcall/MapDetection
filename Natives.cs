@@ -37,9 +37,202 @@ namespace MapDetection
         
         [DllImport("kernel32.dll", SetLastError = true)]
         public static extern ulong OpenThread(ThreadAccess dwDesiredAccess, bool bInheritHandle, int dwThreadId);
+
+        [DllImport("kernel32.dll", SetLastError = true)]
+        public static extern bool GetThreadContext(ulong hThread, ref CONTEXT lpContext);
+        
+        [DllImport("kernel32.dll", SetLastError = true)]
+        public static extern bool GetThreadContext(ulong hThread, ref CONTEXT64 lpContext);
+
+        [DllImport("kernel32.dll", SetLastError = true, CallingConvention = CallingConvention.Winapi)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        public static extern bool IsWow64Process([In] IntPtr processHandle, [Out, MarshalAs(UnmanagedType.Bool)] out bool wow64Process);
+
+        [DllImport("psapi.dll", SetLastError = true)]
+        public static extern bool GetModuleInformation(IntPtr hProcess, IntPtr hModule, out MODULEINFO lpmodinfo, uint cb);
         #endregion
 
         #region Structs
+        public enum CONTEXT_FLAGS : uint
+        {
+            CONTEXT_i386 = 0x10000,
+            CONTEXT_i486 = 0x10000,   //  same as i386
+            CONTEXT_CONTROL = CONTEXT_i386 | 0x01, // SS:SP, CS:IP, FLAGS, BP
+            CONTEXT_INTEGER = CONTEXT_i386 | 0x02, // AX, BX, CX, DX, SI, DI
+            CONTEXT_SEGMENTS = CONTEXT_i386 | 0x04, // DS, ES, FS, GS
+            CONTEXT_FLOATING_POINT = CONTEXT_i386 | 0x08, // 387 state
+            CONTEXT_DEBUG_REGISTERS = CONTEXT_i386 | 0x10, // DB 0-3,6,7
+            CONTEXT_EXTENDED_REGISTERS = CONTEXT_i386 | 0x20, // cpu specific extensions
+            CONTEXT_FULL = CONTEXT_CONTROL | CONTEXT_INTEGER | CONTEXT_SEGMENTS,
+            CONTEXT_ALL = CONTEXT_CONTROL | CONTEXT_INTEGER | CONTEXT_SEGMENTS | CONTEXT_FLOATING_POINT | CONTEXT_DEBUG_REGISTERS | CONTEXT_EXTENDED_REGISTERS
+        }
+        
+        [StructLayout(LayoutKind.Sequential)]
+        public struct MODULEINFO
+        {
+            public IntPtr lpBaseOfDll;
+            public uint SizeOfImage;
+            public IntPtr EntryPoint;
+        }
+        
+        [StructLayout(LayoutKind.Sequential)]
+        public struct FLOATING_SAVE_AREA
+        {
+            public uint ControlWord;
+            public uint StatusWord;
+            public uint TagWord;
+            public uint ErrorOffset;
+            public uint ErrorSelector;
+            public uint DataOffset;
+            public uint DataSelector;
+            [MarshalAs(UnmanagedType.ByValArray, SizeConst = 80)]
+            public byte[] RegisterArea;
+            public uint Cr0NpxState;
+        }
+
+        [StructLayout(LayoutKind.Sequential)]
+        public struct CONTEXT
+        {
+            public NT.CONTEXT_FLAGS ContextFlags; //set this to an appropriate value 
+                                      // Retrieved by CONTEXT_DEBUG_REGISTERS 
+            public uint Dr0;
+            public uint Dr1;
+            public uint Dr2;
+            public uint Dr3;
+            public uint Dr6;
+            public uint Dr7;
+            // Retrieved by CONTEXT_FLOATING_POINT 
+            public FLOATING_SAVE_AREA FloatSave;
+            // Retrieved by CONTEXT_SEGMENTS 
+            public uint SegGs;
+            public uint SegFs;
+            public uint SegEs;
+            public uint SegDs;
+            // Retrieved by CONTEXT_INTEGER 
+            public uint Edi;
+            public uint Esi;
+            public uint Ebx;
+            public uint Edx;
+            public uint Ecx;
+            public uint Eax;
+            // Retrieved by CONTEXT_CONTROL 
+            public uint Ebp;
+            public uint Eip;
+            public uint SegCs;
+            public uint EFlags;
+            public uint Esp;
+            public uint SegSs;
+            // Retrieved by CONTEXT_EXTENDED_REGISTERS 
+            [MarshalAs(UnmanagedType.ByValArray, SizeConst = 512)]
+            public byte[] ExtendedRegisters;
+        }
+
+        // Next x64
+
+        [StructLayout(LayoutKind.Sequential)]
+        public struct M128A
+        {
+            public ulong High;
+            public long Low;
+
+            public override string ToString()
+            {
+                return string.Format("High:{0}, Low:{1}", this.High, this.Low);
+            }
+        }
+
+        /// <summary>
+        /// x64
+        /// </summary>
+        [StructLayout(LayoutKind.Sequential, Pack = 16)]
+        public struct XSAVE_FORMAT64
+        {
+            public ushort ControlWord;
+            public ushort StatusWord;
+            public byte TagWord;
+            public byte Reserved1;
+            public ushort ErrorOpcode;
+            public uint ErrorOffset;
+            public ushort ErrorSelector;
+            public ushort Reserved2;
+            public uint DataOffset;
+            public ushort DataSelector;
+            public ushort Reserved3;
+            public uint MxCsr;
+            public uint MxCsr_Mask;
+
+            [MarshalAs(UnmanagedType.ByValArray, SizeConst = 8)]
+            public M128A[] FloatRegisters;
+
+            [MarshalAs(UnmanagedType.ByValArray, SizeConst = 16)]
+            public M128A[] XmmRegisters;
+
+            [MarshalAs(UnmanagedType.ByValArray, SizeConst = 96)]
+            public byte[] Reserved4;
+        }
+
+        /// <summary>
+        /// x64
+        /// </summary>
+        [StructLayout(LayoutKind.Sequential, Pack = 16)]
+        public struct CONTEXT64
+        {
+            public ulong P1Home;
+            public ulong P2Home;
+            public ulong P3Home;
+            public ulong P4Home;
+            public ulong P5Home;
+            public ulong P6Home;
+
+            public CONTEXT_FLAGS ContextFlags;
+            public uint MxCsr;
+
+            public ushort SegCs;
+            public ushort SegDs;
+            public ushort SegEs;
+            public ushort SegFs;
+            public ushort SegGs;
+            public ushort SegSs;
+            public uint EFlags;
+
+            public ulong Dr0;
+            public ulong Dr1;
+            public ulong Dr2;
+            public ulong Dr3;
+            public ulong Dr6;
+            public ulong Dr7;
+
+            public ulong Rax;
+            public ulong Rcx;
+            public ulong Rdx;
+            public ulong Rbx;
+            public ulong Rsp;
+            public ulong Rbp;
+            public ulong Rsi;
+            public ulong Rdi;
+            public ulong R8;
+            public ulong R9;
+            public ulong R10;
+            public ulong R11;
+            public ulong R12;
+            public ulong R13;
+            public ulong R14;
+            public ulong R15;
+            public ulong Rip;
+
+            public XSAVE_FORMAT64 DUMMYUNIONNAME;
+
+            [MarshalAs(UnmanagedType.ByValArray, SizeConst = 26)]
+            public M128A[] VectorRegister;
+            public ulong VectorControl;
+
+            public ulong DebugControl;
+            public ulong LastBranchToRip;
+            public ulong LastBranchFromRip;
+            public ulong LastExceptionToRip;
+            public ulong LastExceptionFromRip;
+        }
+
         [StructLayout(LayoutKind.Sequential, Pack = 1)]
         public struct PROCESS_BASIC_INFORMATION
         {
@@ -116,16 +309,36 @@ namespace MapDetection
             }
         }
 
+        public enum PAGE_STATE : uint
+        {
+            MEM_COMMIT = 0x1000,
+            MEM_FREE = 0x10000,
+            MEM_RESERVE = 0x2000
+        }
+
+        public enum PAGE_TYPE : uint
+        {
+            MEM_IMAGE = 0x1000000,
+            MEM_MAPPED = 0x40000,
+            MEM_PRIVATE = 0x20000
+        }
+
+        public struct ModuleInfo
+        {
+            public ulong ModuleHandle;
+            public uint ModuleSize;
+        }
+
         [StructLayout(LayoutKind.Sequential)]
         public struct MEMORY_BASIC_INFORMATION
         {
             public ulong BaseAddress;
             public ulong AllocationBase;
-            public uint AllocationProtect;
+            public MemoryProtection AllocationProtect;
             public ulong RegionSize;
-            public uint State;
+            public PAGE_STATE State;
             public uint Protect;
-            public uint Type;
+            public PAGE_TYPE Type;
         }
 
 
@@ -522,7 +735,22 @@ namespace MapDetection
             MemoryWrite = 0x80000000
         }
 
-        
+        [Flags]
+        public enum MemoryProtection : uint
+        {
+            Execute = 0x10,
+            ExecuteRead = 0x20,
+            ExecuteReadWrite = 0x40,
+            ExecuteWriteCopy = 0x80,
+            NoAccess = 0x01,
+            ReadOnly = 0x02,
+            ReadWrite = 0x04,
+            WriteCopy = 0x08,
+            GuardModifierflag = 0x100,
+            NoCacheModifierflag = 0x200,
+            WriteCombineModifierflag = 0x400
+        }
+
         [Flags]
         public enum ThreadAccess : int
         {

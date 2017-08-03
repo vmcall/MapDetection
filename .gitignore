@@ -3,3 +3,6 @@
 ################################################################################
 
 /obj/x64/Release/MapDetection.csproj.FileListAbsolute.txt
+/obj
+/obj
+/obj/Debug
