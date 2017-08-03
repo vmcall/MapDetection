@@ -8,10 +8,10 @@ Detect manualmapped images remotely, without hassle
 ## How does it work?
 MapDetection has two modes, deep and quick.
 
-### Quick mode 
+##### Quick mode 
 Iterates every process thread, collecting allocation bases from thread starts and instruction pointers. It then scans every unique allocation base for any anomalies.
 
-### Deep mode
+##### Deep mode
 Deep mode will run quick scan, then continue to traverse the virtual memory space for any executable pages that do not belong to a module. (Will lead to false positives)
 
 ## Anomalies MapDetection looks for
