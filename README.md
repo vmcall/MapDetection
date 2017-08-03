@@ -6,9 +6,13 @@ Detect manualmapped images remotely, without hassle
 + Xenos -> detected (even with Add Loader reference enabled)
 
 ## How does it work?
-First, it iterates every running thread owned by specified process, it then gets thread start address and then gets the allocation base of said thread.
-For modules in memory, the allocation base is the start of the dos header (it always is)
-It then scans every unique allocation base for any anomalies it might have.
+MapDetection has two modes, deep and quick.
+
+### Quick mode 
+Iterates every process thread, saves all unique allocation bases. It then scans every unique allocation base for any anomalies.
+
+### Deep mode
+Deep mode will run quick scan, then continue to traverse the virtual memory space for any executable pages that do not belong to a module.
 
 ## Anomalies MapDetection looks for
 + Valid PE headers (MZ signature, PE magic bytes and architecture)
