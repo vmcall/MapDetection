@@ -42,9 +42,9 @@ namespace MapDetection
             SetConsoleColor(oldColor);
         }
 
-        public static void LogWarning(string error, int padCount = 0)
+        public static void LogWarning(string error, bool alert = false, int padCount = 0)
         {
-            var oldColor = SetConsoleColor(ConsoleColor.DarkYellow);
+            var oldColor = SetConsoleColor(alert ? ConsoleColor.Red : ConsoleColor.DarkYellow);
 
             for (int i = 0; i < padCount; i++)
                 Console.Write("  ");

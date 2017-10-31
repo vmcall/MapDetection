@@ -337,7 +337,7 @@ namespace MapDetection
             public MemoryProtection AllocationProtect;
             public ulong RegionSize;
             public PAGE_STATE State;
-            public uint Protect;
+            public MemoryProtection Protect;
             public PAGE_TYPE Type;
         }
 

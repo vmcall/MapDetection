@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace MapDetection
@@ -17,7 +18,7 @@ namespace MapDetection
             {
                 try
                 {
-                    MapDetector.ScanForAnomalies(process, MapDetector.SCAN_MODE.DEEP);
+                    MapDetector.ScanForAnomalies(process, MapDetector.SCAN_MODE.QUICK);
                 }
                 catch
                 {
@@ -26,7 +27,7 @@ namespace MapDetection
             });
 
             Log.LogInfo($"Finished scanning - {stopWatch.ElapsedMilliseconds}ms");
-
+            
             Console.ReadLine();
         }
     }

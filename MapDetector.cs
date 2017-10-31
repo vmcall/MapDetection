@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
 
 namespace MapDetection
@@ -20,6 +21,46 @@ namespace MapDetection
             QUICK,
             DEEP
         };
+        
+        private static bool PatternCheck(byte[] buffer, int nOffset, byte[] arrPattern)
+        {
+            for (int i = 0; i < arrPattern.Length; i++)
+            {
+                if (arrPattern[i] == 0x0)
+                    continue;
+
+                if (arrPattern[i] != buffer[nOffset + i])
+                    return false;
+            }
+
+            return true;
+        }
+
+        public static ulong FindPattern(byte[] buffer, string szPattern)
+        {
+            byte[] arrPattern = ParsePatternString(szPattern);
+
+            for (int nModuleIndex = 0; nModuleIndex < buffer.Length; nModuleIndex++)
+            {
+                if (buffer[nModuleIndex] != arrPattern[0])
+                    continue;
+
+                if (PatternCheck(buffer, nModuleIndex, arrPattern))
+                    return (ulong)nModuleIndex;
+            }
+            
+            return 0;
+        }
+
+        private static byte[] ParsePatternString(string szPattern)
+        {
+            List<byte> patternbytes = new List<byte>();
+
+            foreach (var szByte in szPattern.Split(' '))
+                patternbytes.Add(szByte == "?" ? (byte)0x0 : Convert.ToByte(szByte, 16));
+
+            return patternbytes.ToArray();
+        }
 
         static List<NT.ModuleInfo> g_linkedModules = null;
         public static void ScanForAnomalies(Process targetProcess, SCAN_MODE mode)
@@ -57,12 +98,14 @@ namespace MapDetection
                 var result = ValidateImage(targetProcess, scanData);
 
                 if (result != PE_SECTION_INFO.Valid)
-                    Log.LogWarning($"{scanData.AllocationBase.ToString("x2")} -> {result}", 2);
+                    Log.LogWarning($"{scanData.AllocationBase.ToString("x2")} -> {result}", true, 2);
 
             });
 
             // DO A DEEPER SCAN BY WALKING THE VIRTUAL ADDRESSES, LOOKING FOR 
             // INDEPENDENT EXECUTABLE VIRTUAL PAGES
+
+            Log.LogInfo($"Iterating virtual pages", 1);
             if (mode == SCAN_MODE.DEEP)
             {
                 var query = new NT.MEMORY_BASIC_INFORMATION();
@@ -74,13 +117,28 @@ namespace MapDetection
                     if (query.State == NT.PAGE_STATE.MEM_FREE)
                         continue;
 
-                    if (query.AllocationProtect != NT.MemoryProtection.ExecuteReadWrite &&
-                        query.AllocationProtect != NT.MemoryProtection.ExecuteWriteCopy)
+                    if (query.Protect != NT.MemoryProtection.ExecuteReadWrite &&
+                        query.Protect != NT.MemoryProtection.ExecuteWriteCopy)
                         continue;
                     
                     // TEST IF ADDRESS IS WITHIN ANY LINKED MODULE
-                    if (!g_linkedModules.Any(module => IsAddressInsideModule(module, query.AllocationBase)))
-                        Log.LogWarning($"{query.BaseAddress.ToString("x2")} - {query.AllocationProtect}", 2);
+                    if (!g_linkedModules.Any(module => IsAddressInsideModule(module, query.BaseAddress)))
+                    {
+                        Log.LogWarning($"{query.BaseAddress.ToString("x2")} - {query.RegionSize / 1000}kb", query.Type == NT.PAGE_TYPE.MEM_IMAGE, 2);
+
+                        if (query.RegionSize > 400000) // 40kb
+                        {
+                            var buffer = targetProcess.ReadMemory(query.BaseAddress, query.RegionSize);
+                            var pattern = FindPattern(buffer, "73 6E 78 68 6B 36 34 2E 64 6C 6C");
+                        }
+
+                        //if (query.Type == NT.PAGE_TYPE.MEM_IMAGE)
+                        //{
+                        //    var buffer = targetProcess.ReadMemory(query.BaseAddress, query.RegionSize);
+                        //    File.WriteAllBytes(query.BaseAddress.ToString("x2"), buffer);
+                        //}
+                        
+                    }
 
                 } while (query.RegionSize > 0);
             }
